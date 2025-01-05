@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+{% block title %}Home{% endblock %}
+{% block content %}
+<div class="background-container">
+    <div class="background"></div>
+    <div class="search-container">
+        <form method="get" action="{{ url_for('index') }}" class="search-form">
+            <input type="text" name="search" placeholder="Search items..." value="{{ search_query }}">
+            <button type="submit">Search</button>
+        </form>
+    </div>
+</div>
+<div class="flash-messages" id="flash-messages"></div>
+<div class="filters">
+    <a href="{{ url_for('index', category='Category 1') }}">Men Collection</a>
+    <a href="{{ url_for('index', category='Category 2') }}">Women Collection</a>
+    <a href="{{ url_for('index') }}">All</a>
+</div>
+<div class="items">
+    {% for item in items %}
+        <div class="item" data-id="{{ item.id }}">
+            <img src="{{ url_for('static', filename='images/' ~ item.image) }}" alt="{{ item.name }}">
+            <h2>{{ item.name }}</h2>
+            <p>${{ item.price }}</p>
+            <div class="cart-controls">
+                <button class="remove-from-cart" data-id="{{ item.id }}" style="display: none;">-</button>
+                <span class="quantity" style="display: none;">0</span>
+                <button class="add-to-cart" data-id="{{ item.id }}">Add to Cart</button>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+
+<!-- Modal Box -->
+<div id="register-modal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <p>You need to register to add items to the cart.</p>
+        <a href="{{ url_for('register') }}" class="register-button">Register</a>
+    </div>
+</div>
+
+<script>
+    document.querySelectorAll('.add-to-cart').forEach(button => {
+        button.addEventListener('click', function() {
+            const itemId = this.getAttribute('data-id');
+            fetch(`/add_to_cart/${itemId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.category === 'error' && data.redirect) {
+                    const modal = document.getElementById('register-modal');
+                    modal.style.display = 'block';
+                } else {
+                    const flashMessages = document.getElementById('flash-messages');
+                    const messageDiv = document.createElement('div');
+                    messageDiv.className = `flash-message ${data.category}`;
+                    messageDiv.textContent = data.message;
+                    flashMessages.appendChild(messageDiv);
+                    setTimeout(() => {
+                        messageDiv.style.display = 'none';
+                    }, 5000);
+
+                    const itemDiv = document.querySelector(`.item[data-id="${itemId}"]`);
+                    const quantitySpan = itemDiv.querySelector('.quantity');
+                    const removeButton = itemDiv.querySelector('.remove-from-cart');
+                    const addButton = itemDiv.querySelector('.add-to-cart');
+
+                    quantitySpan.textContent = data.quantity;
+                    quantitySpan.style.display = 'inline';
+                    removeButton.style.display = 'inline';
+                    addButton.textContent = '+';
+                }
+            });
+        });
+    });
+
+    document.querySelectorAll('.remove-from-cart').forEach(button => {
+        button.addEventListener('click', function() {
+            const itemId = this.getAttribute('data-id');
+            fetch(`/remove_from_cart/${itemId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                const flashMessages = document.getElementById('flash-messages');
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `flash-message ${data.category}`;
+                messageDiv.textContent = data.message;
+                flashMessages.appendChild(messageDiv);
+                setTimeout(() => {
+                    messageDiv.style.display = 'none';
+                }, 5000);
+
+                const itemDiv = document.querySelector(`.item[data-id="${itemId}"]`);
+                const quantitySpan = itemDiv.querySelector('.quantity');
+                const removeButton = itemDiv.querySelector('.remove-from-cart');
+                const addButton = itemDiv.querySelector('.add-to-cart');
+
+                if (data.quantity > 0) {
+                    quantitySpan.textContent = data.quantity;
+                } else {
+                    quantitySpan.style.display = 'none';
+                    removeButton.style.display = 'none';
+                    addButton.textContent = 'Add to Cart';
+                }
+            });
+        });
+    });
+
+    // Modal box close functionality
+    const modal = document.getElementById('register-modal');
+    const closeModal = document.querySelector('.modal .close');
+    closeModal.addEventListener('click', () => {
+        modal.style.display = 'none';
+    });
+
+    window.addEventListener('click', (event) => {
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+
+    // Background fade effect
+    window.addEventListener('scroll', function() {
+        const background = document.querySelector('.background');
+        const scrollPosition = window.scrollY;
+        const fadeStart = 100; // Start fading at this scroll position
+        const fadeEnd = 300; // Fully faded at this scroll position
+
+        if (scrollPosition <= fadeStart) {
+            background.style.opacity = 1;
+        } else if (scrollPosition >= fadeEnd) {
+            background.style.opacity = 0;
+        } else {
+            const opacity = 1 - (scrollPosition - fadeStart) / (fadeEnd - fadeStart);
+            background.style.opacity = opacity;
+        }
+    });
+</script>
+{% endblock %}
